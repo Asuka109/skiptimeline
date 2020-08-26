@@ -30,14 +30,14 @@ export class SkipListNode {
     const [min, max] = range
     if (min > max) throw new Error('illegal range.')
     let currentNode = this.findBelow(min).next
+    const finish = (): boolean => !(currentNode && currentNode.value < max)
     const next = (): NodeRef => {
-      if (currentNode && currentNode.value < max) {
+      if (!finish()) {
         const curr = currentNode
-        currentNode = currentNode.next
+        currentNode = (<SkipListNode>currentNode).next
         return curr
       }
     }
-    const finish = (): boolean => !!currentNode
     return { next, finish }
   }
 
