@@ -5,6 +5,7 @@ export type NodeRef = SkipListNode | undefined
 export interface RangeIterator {
   next: () => NodeRef
   finish: () => boolean
+  current: () => NodeRef
 }
 
 export class SkipListNode {
@@ -30,30 +31,10 @@ export class SkipListNode {
     return currentNode
   }
 
-  findBelow (value: number): SkipListNode {
-    let currentNode: SkipListNode = this
-    while (currentNode.next && currentNode.next.value < value) {
-      currentNode = currentNode.next
-    }
-    return currentNode.down?.findBelow(value) ?? currentNode
-  }
-
-  iterableRange (range: [number, number] = [-Infinity, Infinity]): RangeIterator {
-    const [min, max] = range
-    if (min > max) throw new Error('illegal range.')
-    let currentNode = this.findBelow(min).next
-    const finish = (): boolean => !(currentNode && currentNode.value < max)
-    const next = (): NodeRef => {
-      if (!finish()) {
-        const curr = currentNode
-        currentNode = (<SkipListNode>currentNode).next
-        return curr
-      }
-    }
-    return { next, finish }
-  }
-
   enhance (): SkipListNode {
+    if (this.up) {
+      throw new Error('Can\'t enhance a node with up node.')
+    }
     let currentNode: SkipListNode = this
     while (!currentNode.up) {
       if (!currentNode.prev) {
@@ -85,47 +66,21 @@ export class SkipListNode {
       currentNode = currentNode.up
     }
   }
-
-  toArray (): Array<SkipListNode> {
-    const { next, finish } = this.iterableRange()
-    const result: Array<SkipListNode> = []
-    while (!finish()) {
-      result.push(next() as SkipListNode)
-    }
-    return result
-  }
 }
 
-export class SkipList extends SkipListNode {
-  constructor (source?: Array<number>) {
+export class SkipListHead extends SkipListNode {
+  constructor () {
     super(-Infinity)
-
-    if (!source) return
-    let currentNode: SkipListNode = this
-    source.forEach((v, i) => {
-      const node = new SkipListNode(v)
-      currentNode.next = node
-      node.prev = currentNode
-      currentNode = node
-    })
-
-    let top: NodeRef = this
-    while (top?.seek(nodeInterval)) {
-      top.enhance()
-      let tempNode: NodeRef = top.seek(nodeInterval)
-      while (tempNode) {
-        tempNode.enhance()
-        tempNode = tempNode.seek(nodeInterval)
-      }
-      top = top.up
-    }
   }
 
   enhance (): SkipListNode {
-    if (!this.prev && !this.next) {
-      throw new Error('Can\'t enhance a node with prev or next node.')
+    if (this.up) {
+      throw new Error('Can\'t enhance a node with up node.')
     }
-    const higher = new SkipList()
+    if (!this.prev && !this.next) {
+      throw new Error('Can\'t enhance a node without prev or next node.')
+    }
+    const higher = new SkipListHead()
     this.up = higher
     higher.down = this
     return higher
@@ -139,5 +94,106 @@ export class SkipList extends SkipListNode {
       }
       currentNode = currentNode.up
     }
+  }
+}
+
+export class SkipList {
+  root: SkipListHead
+  bottom: SkipListHead
+  constructor (source?: Array<number>) {
+    this.root = new SkipListHead()
+    this.bottom = this.root
+    if (!source) return
+    let currentNode: SkipListNode = this.root
+    source.forEach((v, i) => {
+      const node = new SkipListNode(v)
+      currentNode.next = node
+      node.prev = currentNode
+      currentNode = node
+    })
+
+    let top: SkipListHead = this.root
+    while (top.seek(nodeInterval)) {
+      top = top.enhance()
+      let tempNode: NodeRef = (<SkipListHead>top.down).seek(nodeInterval)
+      while (tempNode) {
+        tempNode.enhance()
+        tempNode = tempNode.seek(nodeInterval)
+      }
+    }
+    this.root = top
+  }
+
+  seek (distance: number): NodeRef {
+    return this.bottom.seek(distance)
+  }
+
+  findBelow (value: number): SkipListNode {
+    let currentNode: SkipListNode = this.root
+
+    while (true) {
+      while (currentNode.next && currentNode.next.value < value) {
+        currentNode = currentNode.next
+      }
+      if (currentNode.down) {
+        currentNode = currentNode.down
+      } else break
+    }
+    return currentNode
+  }
+
+  find (value: number): NodeRef {
+    const temp = this.findBelow(value).next
+    if (temp?.value === value) return temp
+  }
+
+  iterableRange (range: [number, number] = [-Infinity, Infinity]): RangeIterator {
+    const [min, max] = range
+    if (min > max) throw new Error('illegal range.')
+    let currentNode = this.findBelow(min).next
+    const finish = (): boolean => !(currentNode && currentNode.value < max)
+    const next = (): NodeRef => {
+      if (!finish()) {
+        const curr = currentNode
+        currentNode = (<SkipListNode>currentNode).next
+        return curr
+      }
+    }
+    const current = (): NodeRef => currentNode
+    return { next, finish, current }
+  }
+
+  toArray (): Array<SkipListNode> {
+    const { next, finish } = this.iterableRange()
+    const result: Array<SkipListNode> = []
+    while (!finish()) {
+      result.push(next() as SkipListNode)
+    }
+    return result
+  }
+
+  _attemptEnhance (node: SkipListNode): void {
+    if (Math.random() < 1 / nodeInterval) {
+      const up = node.enhance()
+      if (up) this._attemptEnhance(up)
+    }
+  }
+
+  push (value: number): NodeRef {
+    const prevNode = this.findBelow(value)
+    const nextNode = prevNode.next
+    if (nextNode?.value === value) return
+    const tempNode = new SkipListNode(value)
+    tempNode.prev = prevNode
+    tempNode.next = nextNode
+    prevNode.next = tempNode
+    nextNode && (nextNode.prev = tempNode)
+    this._attemptEnhance(tempNode)
+    return tempNode
+  }
+
+  delete (target: SkipListNode | number): void {
+    const temp = target instanceof SkipListNode ? target : this.find(target)
+    if (temp) temp.remove()
   }
 }
