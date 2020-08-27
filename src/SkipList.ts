@@ -95,3 +95,49 @@ export class SkipListNode {
     return result
   }
 }
+
+export class SkipList extends SkipListNode {
+  constructor (source?: Array<number>) {
+    super(-Infinity)
+
+    if (!source) return
+    let currentNode: SkipListNode = this
+    source.forEach((v, i) => {
+      const node = new SkipListNode(v)
+      currentNode.next = node
+      node.prev = currentNode
+      currentNode = node
+    })
+
+    let top: NodeRef = this
+    while (top?.seek(nodeInterval)) {
+      top.enhance()
+      let tempNode: NodeRef = top.seek(nodeInterval)
+      while (tempNode) {
+        tempNode.enhance()
+        tempNode = tempNode.seek(nodeInterval)
+      }
+      top = top.up
+    }
+  }
+
+  enhance (): SkipListNode {
+    if (!this.prev && !this.next) {
+      throw new Error('Can\'t enhance a node with prev or next node.')
+    }
+    const higher = new SkipList()
+    this.up = higher
+    higher.down = this
+    return higher
+  }
+
+  remove (): void {
+    let currentNode: NodeRef = this
+    while (currentNode) {
+      if (!currentNode.next && currentNode.down) {
+        currentNode.down.up = undefined
+      }
+      currentNode = currentNode.up
+    }
+  }
+}
