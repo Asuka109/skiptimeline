@@ -17,6 +17,7 @@ module.exports = {
     '@typescript-eslint'
   ],
   rules: {
-    'no-extra-semi': 'error'
+    'no-extra-semi': 'error',
+    'no-dupe-class-members': 'off'
   }
 }

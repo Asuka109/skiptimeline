@@ -100,17 +100,23 @@ export class SkipListHead extends SkipListNode {
 export class SkipList {
   root: SkipListHead
   bottom: SkipListHead
+
   constructor (source?: Array<number>) {
     this.root = new SkipListHead()
     this.bottom = this.root
     if (!source) return
     let currentNode: SkipListNode = this.root
-    source.forEach((v, i) => {
-      const node = new SkipListNode(v)
-      currentNode.next = node
-      node.prev = currentNode
-      currentNode = node
-    })
+    source
+      .reduce((prev: number[], curr) =>
+        prev.includes(curr) ? prev : [...prev, curr]
+      , [])
+      .sort((a, b) => a - b)
+      .forEach(time => {
+        const node = new SkipListNode(time)
+        currentNode.next = node
+        node.prev = currentNode
+        currentNode = node
+      })
 
     let top: SkipListHead = this.root
     while (top.seek(nodeInterval)) {
