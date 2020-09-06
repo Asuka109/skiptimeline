@@ -1,4 +1,5 @@
-import { SkipList, SkipListNode } from '~SkipList'
+// eslint-disable-next-line no-unused-vars
+import { SkipList, SkipListNode } from './SkipList'
 
 export interface TimePointCallback {
   (...args: any[]): any
@@ -53,10 +54,10 @@ export class SkipTimeline {
   }
 
   between (start: number, end: number): TimePoint[] | undefined {
-    const { next, current } = this.skiplist.iterableRange([start, end])
+    const { next, finish } = this.skiplist.iterableRange([start, end])
     const result: TimePoint[] = []
-    while (next()) {
-      const time = (<SkipListNode>current()).value
+    while (!finish()) {
+      const time = (<SkipListNode>next()).value
       result.push(...(this.buckets[time] as TimePoint[]))
     }
     return result
@@ -64,15 +65,15 @@ export class SkipTimeline {
 
   trigger (start: number, end: number, ...args: any[]): number {
     if (start >= end) throw new Error('illegal arguments.')
-    const { next, current } = this.skiplist.iterableRange([start, end])
+    const { next, finish } = this.skiplist.iterableRange([start, end])
     let count = 0
-    while (next()) {
-      const node = <SkipListNode>current()
+    while (!finish()) {
+      const node = <SkipListNode>next()
       const time = node.value
       let points = this.buckets[time] as TimePoint[]
-      points = points.filter((p, i) => {
-        p.callback.call(this.skiplist, ...args)
-        if (p.once) return false
+      points = points.filter(point => {
+        point.callback.call(this.skiplist, ...args)
+        if (point.once) return false
         else return true
       })
       if (points.length) {

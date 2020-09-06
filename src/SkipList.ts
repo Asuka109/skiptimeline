@@ -5,7 +5,6 @@ export type NodeRef = SkipListNode | undefined
 export interface RangeIterator {
   next: () => NodeRef
   finish: () => boolean
-  current: () => NodeRef
 }
 
 export class SkipListNode {
@@ -156,17 +155,15 @@ export class SkipList {
   iterableRange (range: [number, number] = [-Infinity, Infinity]): RangeIterator {
     const [min, max] = range
     if (min > max) throw new Error('illegal range.')
-    let currentNode = this.findBelow(min).next
-    const finish = (): boolean => !(currentNode && currentNode.value < max)
+    let currentNode: NodeRef = this.findBelow(min)
+    const finish = (): boolean => (currentNode?.next?.value ?? Infinity) >= max
     const next = (): NodeRef => {
       if (!finish()) {
-        const curr = currentNode
         currentNode = (<SkipListNode>currentNode).next
-        return curr
+        return currentNode
       }
     }
-    const current = (): NodeRef => currentNode
-    return { next, finish, current }
+    return { next, finish }
   }
 
   toArray (): Array<SkipListNode> {
