@@ -36,10 +36,12 @@ export class SkipListNode {
     }
     let currentNode: SkipListNode = this
     while (!currentNode.up) {
-      if (!currentNode.prev) {
-        throw new Error('Can\'t find a previous node which has up node.')
-      } else {
+      if (currentNode.prev) {
         currentNode = currentNode.prev
+      } else if (currentNode.value === -Infinity) {
+        currentNode.enhance()
+      } else {
+        throw new Error('Can\'t find a previous node which has up node.')
       }
     }
     const higherPrevNode = currentNode.up
