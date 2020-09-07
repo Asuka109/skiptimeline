@@ -34,6 +34,20 @@ export class SkipTimeline {
     this.skiplist = new SkipList(timePoints.map(p => p.time))
   }
 
+  push (point: TimePoint): void {
+    const time = point.time
+    if (this.buckets[time] instanceof Array) {
+      this.buckets[time]?.push(point)
+    } else {
+      this.buckets[time] = [point]
+    }
+    this.skiplist.push(time)
+  }
+
+  extend (points: TimePoint[]): void {
+    points.forEach(point => this.push(point))
+  }
+
   get (time: number): TimePoint[] | undefined {
     return this.buckets[time]
   }
