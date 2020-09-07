@@ -1,4 +1,4 @@
-const { SkipTimeline } = require('../src/SkipTimeline')
+const { SkipTimeline } = require('../src')
 
 test('skiptimeline trigger', () => {
   const timeList = [0, 10, 235.9, 768.8, 1000]
